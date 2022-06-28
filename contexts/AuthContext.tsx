@@ -1,8 +1,8 @@
-import Router from "next/router";
-import { setCookie, parseCookies, destroyCookie } from "nookies";
-import { createContext, ReactNode, useEffect, useState } from "react";
-import { api } from "../services/apiClient";
+import Router from 'next/router';
+import { destroyCookie, parseCookies, setCookie } from 'nookies';
+import { createContext, ReactNode, useEffect, useState } from 'react';
 
+import { api } from '../services/apiClient';
 
 type User = {
   email: string;
@@ -16,7 +16,8 @@ type SignInCredentials = {
 };
 
 type AuthContextData = {
-  signIn(creadentials: SignInCredentials): Promise<void>;
+  signIn: (creadentials: SignInCredentials) => Promise<void>;
+  signOut: () => void;
   user: User;
   isAuthenticated: boolean;
 };
@@ -27,9 +28,15 @@ type AuthProviderProps = {
 
 export const AuthContext = createContext({} as AuthContextData);
 
-export function signOut() {
+let authChannel: BroadcastChannel;
+
+export function signOut(broadcast: boolean = true) {
   destroyCookie(undefined, "nextauth.token");
   destroyCookie(undefined, "nextauth.refreshToken");
+
+  // authChannel.postMessage("signOut");
+
+  if (broadcast) authChannel.postMessage("signOut");
 
   Router.push("/");
 }
@@ -37,6 +44,25 @@ export function signOut() {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User>();
   const isAuthenticated = !!user;
+
+  useEffect(() => {
+    // BroadCast vai no useEffect no nextjs, pois o useeffect não roda do lado do servidor, e o broadcastchannel precisa rodar somente do lado do client
+    authChannel = new BroadcastChannel("auth");
+
+    authChannel.onmessage = (message) => {
+      // console.log(message);
+      switch (message.data) {
+        case "signOut":
+          signOut(false);
+          break;
+        // case "signIn":
+        //   signIn( false);
+        //   break;
+        default:
+          break;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const { "nextauth.token": token } = parseCookies();
@@ -89,6 +115,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       Router.push("/dashboard");
 
+      // if (broadcast) authChannel.postMessage('signOut');
+
       // console.log(response.data);
       // console.log(user);
     } catch (err) {
@@ -97,7 +125,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   return (
-    <AuthContext.Provider value={{ signIn, isAuthenticated, user }}>
+    <AuthContext.Provider value={{ signIn, signOut, isAuthenticated, user }}>
       {children}
     </AuthContext.Provider>
   );
