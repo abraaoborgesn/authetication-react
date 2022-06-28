@@ -1,7 +1,8 @@
-import { FormEvent, useContext, useState } from "react";
-import { AuthContext } from "../contexts/AuthContext";
+import { FormEvent, useContext, useState } from 'react';
 
-import styles from "../styles/Home.module.css";
+import { AuthContext } from '../contexts/AuthContext';
+import styles from '../styles/Home.module.css';
+import { withSSRGuest } from '../utils/withSSRGuest';
 
 export default function Home() {
   const [email, setEmail] = useState("");
@@ -17,9 +18,9 @@ export default function Home() {
     };
 
     // console.log(data);
-    await signIn(data)
+    await signIn(data);
   }
-  
+
   return (
     <form className={styles.main} onSubmit={handleSubmit}>
       <input
@@ -36,3 +37,22 @@ export default function Home() {
     </form>
   );
 }
+
+export const getServerSideProps = withSSRGuest(async (ctx) => {
+  // console.log(ctx.req.cookies);
+
+  // const cookies = parseCookies(ctx); // do lado do servidor sempre passar o ctx como 1º parametro
+
+  // if (cookies["nextauth.token"]) {
+  //   return {
+  //     redirect: {
+  //       destination: "/dashboard",
+  //       permanent: false,
+  //     },
+  //   };
+  // }
+
+  return {
+    props: {},
+  };
+});
